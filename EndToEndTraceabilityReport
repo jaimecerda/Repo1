@@ -1,0 +1,54 @@
+var sourceNode = "ApplicationComponent"; // configurable parameter for starting element type
+var targetNode = "BusinessProcess"; // configurable parameter for target element type
+var propertyFilter = "priority"; // optional configurable parameter for filtering sourceNode properties
+
+// Iterate through all the model in a given Archi model
+archimateModel.getFolders().forEach(function(folder) {
+  folder.getElements().forEach(function(element) {
+    // Check if the element matches the sourceNode
+    if (element.getType() == sourceNode) {
+      // If propertyFilter is not blank, filter the element's properties
+      if (propertyFilter && element.getProperties().filter(function(property) { return property.getKey() == propertyFilter }).length == 0) {
+        return;
+      }
+      // Create an empty list to store the matching paths
+      var matchingPaths = [];
+      // Recursively search for the targetNode starting from the current element
+      searchForTarget(element, [], matchingPaths);
+      // Write all the matching paths to a file
+      writeMatchingPathsToFile(matchingPaths);
+    }
+  });
+});
+
+// Recursive function to search for the targetNode starting from the given element
+function searchForTarget(element, path, matchingPaths) {
+  // Add the current element to the path
+  path.push(element);
+  // If the element matches the targetNode, add the current path to the matchingPaths list
+  if (element.getType() == targetNode) {
+    matchingPaths.push(path.slice());
+  } else {
+    // Otherwise, recursively search for the targetNode starting from each of the element's relationships
+    element.getSourceRelationships().forEach(function(relationship) {
+      searchForTarget(relationship.getTarget(), path, matchingPaths);
+    });
+  }
+  // Remove the current element from the path before returning
+  path.pop();
+}
+
+// Function to write all the matching paths to a file
+function writeMatchingPathsToFile(matchingPaths) {
+  var file = new java.io.File("matchingPaths.csv");
+  var writer = new java.io.FileWriter(file);
+  writer.write("Path\n");
+  matchingPaths.forEach(function(path) {
+    var row = "";
+    path.forEach(function(element) {
+      row += element.getName() + ",";
+    });
+    writer.write(row.substring(0, row.length - 1) + "\n");
+  });
+  writer.close();
+}
