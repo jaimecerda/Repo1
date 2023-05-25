@@ -1,54 +1,196 @@
-var sourceNode = "ApplicationComponent"; // configurable parameter for starting element type
-var targetNode = "BusinessProcess"; // configurable parameter for target element type
-var propertyFilter = "priority"; // optional configurable parameter for filtering sourceNode properties
+//RULES:
+//-The script treats the Archimate framework layers as a hierarchy, so the recursive loop will prevent a lower layer element to go search into an upper layer element.  This prevents the path search to deviate into elements that won't contribute searching the target node.  Motivation layer is treated same as the Strategy layer.  Grouping and Location are ignored and will be recursively searched.
 
-// Iterate through all the model in a given Archi model
-archimateModel.getFolders().forEach(function(folder) {
-  folder.getElements().forEach(function(element) {
-    // Check if the element matches the sourceNode
-    if (element.getType() == sourceNode) {
-      // If propertyFilter is not blank, filter the element's properties
-      if (propertyFilter && element.getProperties().filter(function(property) { return property.getKey() == propertyFilter }).length == 0) {
-        return;
-      }
-      // Create an empty list to store the matching paths
-      var matchingPaths = [];
-      // Recursively search for the targetNode starting from the current element
-      searchForTarget(element, [], matchingPaths);
-      // Write all the matching paths to a file
-      writeMatchingPathsToFile(matchingPaths);
+//==========================GLOBAL VARIABLES=========================
+var _sourceNode = "requirement";  //configurable parameter for starting element type
+var _targetNode = "artifact";  //configurable parameter for target element type
+var _propertyFilter="";  //optional configurable parameter for filtering _sourceNode's that match given value.  Property value in Archi element should be set to "yes" in order to get a match
+var _matchingPaths = [];  //empty list to store the matching paths
+var _deepLevelLimit = 15;  //number of levels to go deep in recursiveness, after which search will be truncated (to prevent unresponsiveness)
+//variables to store standard archimate elements
+var _motivationElements=["stakeholder","driver","assessment","goal","outcome","principle","requirement","constraint","meaning","value"];
+var _strategyElements=["resource","capability","course-of-action","value-stream"];
+var _businessElements=["business-actor","business-role","business-collaboration","business-interface","business-process","business-function","business-interaction","business-event","business-service","business-object","contract","representation","product"];
+var _applicationElements=["application-component","application-collaboration","application-interface","application-function","application-process","application-interaction","application-event","application-service","data-object"];
+var _technologyElements=["node","device","system-software","technology-collaboration","technology-interface","path","communication-network","technology-function","technology-process","technology-interaction","technology-event","technology-service","artifact"];
+var _physicalElements=["equipment","facility","distribution-network","material"];
+var _impAndMigElements=["work-package","deliverable","implementation-even","plateau","gap"];
+
+
+//==========================FUNCTION LIBRARY=========================
+//Function to encond a raw string to a HTML compatible string 
+function encodeHTML(rawString){
+    return rawString.replace(/[\u00A0-\u9999<>\&]/gim,function(i){
+        return '&#' + i.charCodeAt(0) + ';';
+    });
+}
+
+
+//Fuction to search a given element's layer within the Archimate framework
+function getElementLayer(element){
+    if(_motivationElements.find(e=>e==element.type)){return 1;}
+    if(_strategyElements.find(e=>e==element.type)){return 1;}
+    if(_businessElements.find(e=>e==element.type)){return 3;}
+    if(_applicationElements.find(e=>e==element.type)){return 4;}
+    if(_technologyElements.find(e=>e==element.type)){return 5;}
+    if(_physicalElements.find(e=>e==element.type)){return 6;}
+    if(_impAndMigElements.find(e=>e==element.type)){return 7;}
+}
+
+
+//Function to get the Archimate's standard color on a given element (colors are aproximate to standard)
+function getElementColor(element){
+    if(_motivationElements.find(e=>e==element.type)){return "#ccccff";}
+    if(_strategyElements.find(e=>e==element.type)){return "#f5deaa";}
+    if(_businessElements.find(e=>e==element.type)){return "#ffffb5";}
+    if(_applicationElements.find(e=>e==element.type)){return "#b5ffff";}
+    if(_technologyElements.find(e=>e==element.type)){return "#c9e7b7";}
+    if(_physicalElements.find(e=>e==element.type)){return "#c9e7b7";}
+    if(_impAndMigElements.find(e=>e==element.type)){return "#ffe0e0";}
+}
+
+
+//Function to compare the current element's layer vs target element's layer and see if the target is an upper layer within the Archumate framework
+function isTargetUpperLayer(currentElement,targetElement){
+    var currentElementLayer=getElementLayer(currentElement);
+    var targetElementLayer=getElementLayer(targetElement);
+
+    return targetElementLayer<currentElementLayer;  //TODO: Change the order so operator does what function name indicates
+}
+
+
+//Function to know if there's an element propertyto filter by
+function passesPropertyValidation(element){
+    if(_propertyFilter!=""){
+        return $(element).prop(_propertyFilter)==null ? false : $(element).prop(_propertyFilter).toLowerCase()=="yes";
     }
-  });
+    else{
+        return true;
+    }
+}
+
+
+//Recursive function to search for the Target Node starting from a given element
+function searchForTarget(element, path, _matchingPaths){
+    
+    //Add current element to the path
+    path.push({name:element.name,type:element.type,ID:element.id});
+
+    //If the element matches the Target node, add the current path to the _matchingPaths list
+    if(element.type==_targetNode){
+        _matchingPaths.push(path.slice());
+    }
+
+    //If recursive iteration is too deep then truncate it
+    if(path.length>=_deepLevelLimit){
+        console.log("... recursive iteration too deep, truncating ...");
+        return;
+    }
+
+    //Otherwise, recursively search for the Target node starting from each of the element's relationship's targets (if target passes validations)
+    $(element).outRels().forEach(function(relationship){
+        if((!path.find(e=>e.name==relationship.getTarget().name))                                           //Make sure we don't make circular reference back to an existing element in the path
+            && (relationship.getTarget().type!=_sourceNode)                                                 //Prevent from going back in hierarchy by getting into the Source node.  TODO:See,s redundant
+            && (relationship.type!="specialization-relationship")                                           //Prevent path deviation by going to a "parent", in this case outgoing inheritance
+            && (relationship.type!="influence-relationship")                                                //Ignoring Influence relationships
+            && (!isTargetUpperLayer(element,relationship.getTarget()))){                                    //Prevent from going into an upper layer in Archimate's framwework
+                console.log("Looking from " + element.name + " into " + relationship.getTarget().name);
+                searchForTarget(relationship.getTarget(),path,_matchingPaths);
+        }
+    });
+
+    //Some relationships are considered as inRels, so need to check those too.  Either because of user setting up relationships in reverse order, or because some are reverse by nature
+    $(element).inRels().forEach(function(relationship){
+        if((!path.find(e=>e.name==relationship.getSource().name))                                           //Make sure we don't make circular reference back to an existing element in the path
+            && (relationship.getSource().type!=_sourceNode)                                                 //Prevent from going back in hierarchy by getting into the Source node.  TODO:See,s redundant
+            && (relationship.type!="composition-relationship")                                              //Prevent path deviation by going to a "parent", in this case incoming composition
+            && (relationship.type!="assignment-relationship")                                               //Prevent path deviation by going to a "parent", in this case incoming assignment
+            && (relationship.type!="aggregation-relationship")                                              //Prevent path deviation by going to a "parent", in this case incoming aggregate
+            && (relationship.type!="influence-relationship")                                                //Ignoring Influence relationships
+            && (!isTargetUpperLayer(element,relationship.getSource()))){                                    //Prevent from going into an upper layer in Archimate's framwework
+                console.log("Looking from " + element.name + " into " + relationship.getSource().name);
+                searchForTarget(relationship.getSource(),path,_matchingPaths);
+        }
+    });
+
+    //Remove the current element from the path before returning
+    path.pop();
+}
+
+
+//Function to write all the matching paths to a file
+function write_matchingPathsToFile(_matchingPaths){
+    var filePath = window.promptSaveFile();
+    var writer = new java.io.FileWriter(file);
+    writer.write("Path\n");
+    console.log("\rHere are the resulting paths ...\r");
+    _matchingPaths.forEach(function(path){
+        var row="";
+        path.forEach(function(elementName){
+            row+=elementName + ",";
+        });
+    console.log("row");
+    writer.write(row.substring(0,row.length-1) + "\n");
+    });
+    writer.close();
+}
+
+
+//Function to write all the matching paths to a HTML file
+function write_matchingPathsToHTML(_matchingPaths){
+    var resText="";
+    var bgColor="";
+    var filePath = window.promptSaveFile({
+        title: "Save Report File",
+        filterExtensions: ["*.html"],
+        fileName: "EndToEndTraceabilityReport.md"
+    });
+
+    if(filePath != null) {
+        console.log("\rHere are the resulting paths ...\r");
+        resText+="<!DOCTYPE html>\r<html>\r<head>\r<style>\rth, td { border: 1px solid black; border-radius:3px;}\r</style>\r</head>\r<body>\r";
+        resText+="<h2>End to End Traceability Report</h2>\r";
+        resText+="<h4>FROM:<span style='font-style:italic'>"+_sourceNode+"</span> TO:<span style='font-style:italic'>"+_targetNode+"</span></h4>\r";
+        resText+="<table style='width:100%'>\r";
+        _matchingPaths.forEach(function(path){
+            resText+="<tr>\r";
+            path.forEach(function(pathElement){
+                resText+="<td title='"+pathElement.ID+"' bgcolor='"+getElementColor(pathElement)+"'><div style='font-size:xx-small;font-style:italic'>"+pathElement.type+"</div>"+encodeHTML(pathElement.name)+ "</td>\r";
+            });
+            resText+="</tr>\r";
+        });
+        resText+="</table>\r</body>\r</html>";
+
+        try {
+            $.fs.writeFile(filePath, resText);
+        }
+        catch(err) {
+            console.error(err);
+        }
+    
+        var browser = Browser.open("file:///" + filePath, "End To End Traceability Report");
+        console.log(resText);
+    }
+
+
+
+
+}
+
+
+//==========================MAIN CODE=========================
+console.log("Starting script...");
+
+console.log("... getting initial batch of source elements of type:"+_sourceNode+" \r");
+$(_sourceNode).each(function(element){
+    //Filter by element property if set
+    if(passesPropertyValidation(element)){
+        searchForTarget(element,[],_matchingPaths);
+    }
 });
 
-// Recursive function to search for the targetNode starting from the given element
-function searchForTarget(element, path, matchingPaths) {
-  // Add the current element to the path
-  path.push(element);
-  // If the element matches the targetNode, add the current path to the matchingPaths list
-  if (element.getType() == targetNode) {
-    matchingPaths.push(path.slice());
-  } else {
-    // Otherwise, recursively search for the targetNode starting from each of the element's relationships
-    element.getSourceRelationships().forEach(function(relationship) {
-      searchForTarget(relationship.getTarget(), path, matchingPaths);
-    });
-  }
-  // Remove the current element from the path before returning
-  path.pop();
-}
+console.log("... done going through source elements!\r");
 
-// Function to write all the matching paths to a file
-function writeMatchingPathsToFile(matchingPaths) {
-  var file = new java.io.File("matchingPaths.csv");
-  var writer = new java.io.FileWriter(file);
-  writer.write("Path\n");
-  matchingPaths.forEach(function(path) {
-    var row = "";
-    path.forEach(function(element) {
-      row += element.getName() + ",";
-    });
-    writer.write(row.substring(0, row.length - 1) + "\n");
-  });
-  writer.close();
-}
+//Write to file
+write_matchingPathsToHTML(_matchingPaths);
+console.log("\r... done!");
