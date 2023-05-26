@@ -16,6 +16,30 @@ var _technologyElements=["node","device","system-software","technology-collabora
 var _physicalElements=["equipment","facility","distribution-network","material"];
 var _impAndMigElements=["work-package","deliverable","implementation-even","plateau","gap"];
 
+var _motivationAssesmentFigure="<svg><defs/><g transform='translate(3,4)'><ellipse cx='9' cy='5' rx='6' ry='6' fill='#ccccff' stroke='rgb(0, 0, 0)' pointer-events='all' /><path d='M 0 15 L 4.8 10.2' fill='none' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' /></g></svg>";
+
+var _businessActorFigure="<svg><g><ellipse cx='9' cy='5.25' rx='2.6999999999999997' ry='2.25' fill='#ffff99' stroke='rgb(0, 0, 0)' pointer-events='all' /><path d='M 9 7.5 L 9 14.25 M 4.5 9 L 13.5 9 M 4.5 17 L 9 13.25 L 13.5 17' fill='none' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' /></g></svg>";
+var _businessCollabortionFigure="<svg><g><ellipse cx='9' cy='5.5' rx='4.5' ry='4.5' fill='#ffff99' stroke='rgb(0, 0, 0)' pointer-events='all' /><ellipse cx='15' cy='5.5' rx='4.5' ry='4.5' fill='#ffff99' stroke='rgb(0, 0, 0)' pointer-events='all' /></g></svg>";
+var _businessEventFigure="<svg><g transform='translate(4,0)'><path d='M 9 3 C 11.49 3 13.5 5.01 13.5 7.5 C 13.5 9.99 11.49 12 9 12 L -1.5 12 L 3 7.5 L -1.5 3 Z' fill='#ffff99' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' /></g></svg>";
+var _businessInteractionFigure="<svg><g transform='translate(2,1)'><path d='M 9.25 0 C 12.98 0 16 3.36 16 7.5 C 16 11.64 12.98 15 9.25 15 Z M 7.75 0 C 4.02 0 1 3.36 1 7.5 C 1 11.64 4.02 15 7.75 15 Z' fill='#ffff99' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' /></g></svg>";
+var _businessInterfaceFigure="<svg><g><ellipse cx='11.25' cy='7.5' rx='3.75' ry='3.5' fill='#ffff99' stroke='rgb(0, 0, 0)' pointer-events='all' /><path d='M 0 7.5 L 7.5 7.5' fill='none' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' /></g></svg>";
+var _businessObjectFigure="<svg ><rect x='0' y='0' width='22' height='18' fill='#ffff99' stroke='rgb(0, 0, 0)' pointer-events='all' /><path d='M 0 5 L 22 5.1' fill='none' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' /></svg>";
+
+var _appCollaborationFigure="<svg width='35' height='22'><g><ellipse cx='8.5' cy='12.5' rx='4.5' ry='4.5' fill='#99ffff' stroke='rgb(0, 0, 0)' pointer-events='all'/><ellipse cx='15.5' cy='12.5' rx='4.5' ry='4.5' fill='#99ffff' stroke='rgb(0, 0, 0)' pointer-events='all'/></g></svg>";
+var _appComponentFigure="<svg width='35' height='22'><g><rect x='4.25' y='5' width='9.75' height='15' fill='#99ffff' stroke='rgb(0, 0, 0)' pointer-events='all'/><rect x='1' y='8.75' width='6.5' height='2.25' fill='#99ffff' stroke='rgb(0, 0, 0)' pointer-events='all'/><rect x='1' y='14' width='6.5' height='2.25' fill='#99ffff' stroke='rgb(0, 0, 0)' pointer-events='all'/></g></svg>";
+var _appEventFigure="<svg width='35' height='22'><g><path d='M 20.5 8 C 22.99 8 25 10.01 25 12.5 C 25 14.99 22.99 17 20.5 17 L 9 17 L 14.5 12.5 L 9 8 Z' fill='#99ffff' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all'/></g></svg>";
+var _appFunctionFigure="<svg><g transform='translate(10, 5)><path d='M 0 0 L 7.5 3 L 7.5 15 L 0 12 L -7.5 15 L -7.5 3 Z' fill='#99ffff' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all'/></g></svg>";
+var _appInteractionFigure="<svg><g transform='translate(15, 5)'><path d='M -2.75 0 C 1.98 0 5 3.36 5 7.5 C 5 11.64 1.98 15  -2.75 15 Z M -4.25 0 C -8.98 0 -12 3.36 -12 7.5 C -12 11.64 -8.98 15 -4.25 15 Z' fill='#99ffff' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all'/></g></svg>";
+var _appInterfaceFigure="<svg><g><ellipse cx='11' cy='5' rx='3.75' ry='3.5' fill='#99ffff' stroke='rgb(0, 0, 0)' pointer-events='all' /><path d='M 0 5 L 7.5 5' fill='none' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' /></g></svg>";
+var _appProcessFigure="<svg><g><path d='M 9 5.7 L 18 5.7 L 18 3 L 24 7.5 L 18 12 L 18 9.3 L 9 9.3 Z' fill='#99ffff' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all'/></g></svg>";
+var _appServiceFigure="<svg><g transform='translate(4,0)'><path d='M 9.5 3 C 11.99 3 14 5.01 14 7.5 C 14 9.99 11.99 12 9.5 12 L 3.5 12 C 1.01 12 -1.09 9.99 -1.09 7.5 C -1.09 5.01 1.01 3 3.5 3 Z' fill='#99ffff' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' /></g></svg>";
+var _appDataObjectFigure="<svg ><rect x='0' y='0' width='22' height=='18' fill='#99ffff' stroke='rgb(0, 0, 0)' pointer-events='all' /><path d='M 0 5 L 22 5.1' fill='none' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' /></svg>";
+
+var _techArtifactFigure="<svg><g><path d='M 9 0 L 16.7 0 L 20 3.3 L 20 15 L 9 15 Z M 16.7 0 L 16.7 3.3 L 20 3.3' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all' fill='#afffaf'/></g></svg>";
+
+
+
+
 
 //==========================FUNCTION LIBRARY=========================
 //Function to encond a raw string to a HTML compatible string 
@@ -47,6 +71,20 @@ function getElementColor(element){
     if(_technologyElements.find(e=>e==element.type)){return "#c9e7b7";}
     if(_physicalElements.find(e=>e==element.type)){return "#c9e7b7";}
     if(_impAndMigElements.find(e=>e==element.type)){return "#ffe0e0";}
+}
+
+
+function getElementSymbol(element){
+    var resSymbol="";
+
+    switch (element.type) {
+        case "application-component": resSymbol=_appComponentFigure;
+        break;
+        
+        default: resSymbol="";
+     }
+
+     return resSymbol;
 }
 
 
@@ -148,14 +186,17 @@ function write_matchingPathsToHTML(_matchingPaths){
 
     if(filePath != null) {
         console.log("\rHere are the resulting paths ...\r");
-        resText+="<!DOCTYPE html>\r<html>\r<head>\r<style>\rth, td { border: 1px solid black; border-radius:3px;}\r</style>\r</head>\r<body>\r";
+        resText+="<!DOCTYPE html>\r<html>\r<head>\r<style>\r";
+        resText+="th, td {\r border: 1px solid black;\r border-radius:3px;\r}\r";
+        resText+=".cell-content {\r display:flex;\rjustify-content:space-between;\r}\r\r.cell-header {\rfont-size:xx-small;\rfont-style:italic;\r}";
+        resText+="</style>\r</head>\r<body>\r";
         resText+="<h2>End to End Traceability Report</h2>\r";
         resText+="<h4>FROM:<span style='font-style:italic'>"+_sourceNode+"</span> TO:<span style='font-style:italic'>"+_targetNode+"</span></h4>\r";
         resText+="<table style='width:100%'>\r";
         _matchingPaths.forEach(function(path){
             resText+="<tr>\r";
             path.forEach(function(pathElement){
-                resText+="<td title='"+pathElement.ID+"' bgcolor='"+getElementColor(pathElement)+"'><div style='font-size:xx-small;font-style:italic'>"+pathElement.type+"</div>"+encodeHTML(pathElement.name)+ "</td>\r";
+                resText+="<td title='"+pathElement.ID+"' bgcolor='"+getElementColor(pathElement)+"'><div class='cell-content'><div class='cell-header'>"+pathElement.type+"</div><div class='cell-image'>"+getElementSymbol(pathElement)+"</div></div>"+encodeHTML(pathElement.name)+ "</td>\r";
             });
             resText+="</tr>\r";
         });
