@@ -15,7 +15,7 @@ var _applicationElements=["application-component","application-collaboration","a
 var _technologyElements=["node","device","system-software","technology-collaboration","technology-interface","path","communication-network","technology-function","technology-process","technology-interaction","technology-event","technology-service","artifact"];
 var _physicalElements=["equipment","facility","distribution-network","material"];
 var _impAndMigElements=["work-package","deliverable","implementation-event","plateau","gap"];
-
+var _matrix //The matrix to store the relationship matrix
 
 //variable to store the archimate figures
 var _archimateFigures=[
@@ -182,7 +182,7 @@ function searchForTarget(element, path, _matchingPaths){
             && (relationship.type!="specialization-relationship")                                           //Prevent path deviation by going to a "parent", in this case outgoing inheritance
             && (relationship.type!="influence-relationship")                                                //Ignoring Influence relationships
             && (!isTargetUpperLayer(element,relationship.getTarget()))){                                    //Prevent from going into an upper layer in Archimate's framwework
-                console.log("Looking from " + element.name + " into " + relationship.getTarget().name);
+                //console.log("Looking from " + element.name + " into " + relationship.getTarget().name);
                 searchForTarget(relationship.getTarget(),path,_matchingPaths);
         }
     });
@@ -196,13 +196,65 @@ function searchForTarget(element, path, _matchingPaths){
             && (relationship.type!="aggregation-relationship")                                              //Prevent path deviation by going to a "parent", in this case incoming aggregate
             && (relationship.type!="influence-relationship")                                                //Ignoring Influence relationships
             && (!isTargetUpperLayer(element,relationship.getSource()))){                                    //Prevent from going into an upper layer in Archimate's framwework
-                console.log("Looking from " + element.name + " into " + relationship.getSource().name);
+                //console.log("Looking from " + element.name + " into " + relationship.getSource().name);
                 searchForTarget(relationship.getSource(),path,_matchingPaths);
         }
     });
 
     //Remove the current element from the path before returning
     path.pop();
+}
+
+
+function generateRelationshipMatrix(pathsData){
+    var rowElements= [];
+    var colElements= [];
+
+    //Prepare a unique set of rows and columns.  Rows will always be the first element in the path and columns will always be the last element in the path (theoretically this will correspond to the source element and target elements defined in the global parameters)
+    pathsData.forEach(function(path){
+        if(!rowElements.find(e=>e.ID==Object.values(path)[0].ID)){rowElements.push(Object.values(path)[0]);}
+        if(!colElements.find(e=>e.ID==Object.values(path)[Object.values(path).length-1].ID)){colElements.push(Object.values(path)[Object.values(path).length-1]);}
+    });
+
+   /* console.log("Showing contents of relationship matrix....");
+    console.log("Rows...")
+    for (i = 0; i < rowElements.length; i++)
+        console.log((i+1) + ": " + JSON.stringify(rowElements[i]));
+    console.log("Cols...");
+    for (i = 0; i < colElements.length; i++)
+        console.log((i+1) + ": " + JSON.stringify(colElements[i])); */
+
+    //Prepare the matrix
+    var matrix = Array.from({ length: rowElements.length+1 }, () =>
+        Array.from({ length: colElements.length+1 }, () => '')
+    );
+
+
+    //Fill the matrix headers
+    matrix[0][0]="";  //First column & row should be blank
+    
+    for (c = 0; c < colElements.length; c++){
+        matrix[0][c+1]=colElements[c];
+    }
+    for (r = 0; r < rowElements.length; r++){
+        matrix[r+1][0]=rowElements[r];
+    }
+
+    //Fill the matrix
+    for (r = 0; r < rowElements.length; r++){
+        for (c = 0; c < colElements.length; c++){
+                _matchingPaths.forEach(function(path){
+                    // console.log(`Comparing path...             ${Object.values(path)[0].name} & ${Object.values(path)[Object.values(path).length-1].name}`);
+                    // console.log(`Vs matrix headers...       ${rowElements[r].name}            & ${colElements[c].name}`)
+                    // console.log("==========================================================================");
+                    if(Object.values(path)[0].ID==rowElements[r].ID && Object.values(path)[Object.values(path).length-1].ID==colElements[c].ID){matrix[r+1][c+1]="X";}
+            });
+        }
+    }
+
+    console.log("Matrix results...");
+    console.log(JSON.stringify(matrix));
+    return matrix;
 }
 
 
@@ -225,26 +277,31 @@ function write_matchingPathsToFile(_matchingPaths){
 
 
 //Function to write all the matching paths to a HTML file
-function write_matchingPathsToHTML(_matchingPaths){
+function write_matchingPathsToHTML(matchingPaths,matrix){
     var resText="";
-    var bgColor="";
     var classNamePlaceholder="";
     var filePath = window.promptSaveFile({
         title: "Save Report File",
         filterExtensions: ["*.html"],
-        fileName: "EndToEndTraceabilityReport.md"
+        fileName: "EndToEndTraceabilityReport"
     });
 
     if(filePath != null) {
-        console.log("\rHere are the resulting paths ...\r");
+        /*console.log("\rHere are the resulting paths ...\r");
+        console.log(JSON.stringify(matchingPaths));*/
+
         var resText=`
 <!DOCTYPE html>
 <html>
 <head>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
 <style>
-th, td { border: 1px solid black; border-radius:3px;}
-.cell-content { display:flex;justify-content:space-between;}.cell-header {font-size:xx-small;font-style:italic;}
+.round-cell { border:1px solid black; border-radius:3px;}
+.cell-header {font-size:xx-small;font-style:italic;}
 </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 <script>
     function toggleCellVisibility(checkFlag){
             const cells=document.getElementsByClassName("middleCell");
@@ -264,27 +321,87 @@ th, td { border: 1px solid black; border-radius:3px;}
         });
 }
 </script>
-</head>
-<body>
-<h2>End to End Traceability Report</h2>
-<h4>FROM:<span style='font-style:italic'>`+_sourceNode+`</span> TO:<span style='font-style:italic'>`+_targetNode+`</span></h4>
-<span>Show intermediary elements:</span><input type='checkbox' checked='true' onclick='toggleCellVisibility(this.checked)'/>
-<div></div>
-<span>Show figures:</span><input type='checkbox' checked='true' onclick='toggleFigureVisibility(this.checked)'/>
-<table style='width:100%'>
-        `;
-        _matchingPaths.forEach(function(path){
+<nav class="navbar navbar-expand-lg bg-body-tertiary bg-secondary-subtle">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">End to End Traceability Report</a>
+  </div>
+</nav>
+<div>&nbsp;</div>
+<div class="d-flex flex-row">
+<div class="p-2">
+        FROM:<span style='font-style:italic'>${_sourceNode}</span>&nbsp;&nbsp;TO:<span style='font-style:italic'>${_targetNode}</span>
+</div>
+    <div class="p-2">
+        <div class='form-check form-switch'>
+            <input class='form-check-input' type='checkbox' role='switch' id='flexSwitchCheckChecked2' checked='true' onclick='toggleFigureVisibility(this.checked)'/>
+            <label class='form-check-label' for='flexSwitchCheckChecked2'>Show figures</label>
+        </div>
+    </div>
+</div>
+<ul class="nav nav-tabs" id="tab1" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="e2e-tab" data-bs-toggle="tab" data-bs-target="#e2e-tab-pane" type="button" role="tab" aria-controls="e2e-tab-pane" aria-selected="true">End to End Traceability</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="matrix-tab" data-bs-toggle="tab" data-bs-target="#matrix-tab-pane" type="button" role="tab" aria-controls="matrix-tab-pane" aria-selected="true">Traceability Matrix</button>
+    </li>
+</ul>
+<div class="tab-content" id="tabContent1">
+<div class="tab-pane fade show active" id="e2e-tab-pane" role="tabpanel" aria-labelledby="e2etab" tabindex="0">
+    <div class="d-flex flex-row">
+        <div class="p-2">
+                <div class='form-check form-switch'>
+                    <input class='form-check-input' type='checkbox' role='switch' id='flexSwitchCheckChecked' checked='true' onclick='toggleCellVisibility(this.checked)'/>
+                    <label class='form-check-label' for='flexSwitchCheckChecked'>Show intermediary elements</label>&nbsp;&nbsp;
+                </div>
+            </div>
+    </div>
+    <div>&nbsp;</div>
+    <table style='width:100%'>`;
+        matchingPaths.forEach(function(path){
 
             resText+="<tr>\r";
             path.forEach((pathElement,index)=>{
-                console.log(`Then index:${index}, the length:${path.length}`);
                 if(index===0 || index>=path.length-1) {classNamePlaceholder="";}
                 else {classNamePlaceholder="middleCell";}
-                resText+="<td title='"+pathElement.ID+"' bgcolor='"+getElementColor(pathElement)+"' class='"+classNamePlaceholder+"'><div class='cell-content'><div class='cell-header'>"+pathElement.type+"</div><div class='cell-image archiFigure'>"+getElementSymbol(pathElement)+"</div></div>"+encodeHTML(pathElement.name)+ "</td>\r";
+                resText+=`<td title='${pathElement.ID}' bgcolor='${getElementColor(pathElement)}' class='round-cell ${classNamePlaceholder}'>
+                    <div class="clearfix">
+                        <div class="float-start cell-header">${pathElement.type}</div>
+                        <div class="float-end archiFigure">${getElementSymbol(pathElement)}</div>
+                    </div>
+                    ${encodeHTML(pathElement.name)}
+                </td>`;
             });
             resText+="</tr>\r";
         });
-        resText+="</table>\r</body>\r</html>";
+        resText+=`</table>
+        </div>
+        <div class="tab-pane fade" id="matrix-tab-pane" role="tabpanel" aria-labelledby="matrix-tab" tabindex="0"> 
+        <div>&nbsp;</div>
+        <table style='width:100%'>`;
+        for (r = 0; r < matrix.length; r++){
+            resText+="<tr>"
+            for (c = 0; c < matrix[0].length; c++){
+                    if(r==0 && c==0){ resText+="<td></td>";}        //Blank first col & row
+                    else if(r==0 || c==0){
+                        resText+=`<td title='${matrix[r][c].ID}' bgcolor='${getElementColor(matrix[r][c])}' class="round-cell">                    
+                                    <div class="clearfix">
+                                        <div class="float-start cell-header">${matrix[r][c].type}</div>
+                                        <div class="float-end archiFigure">${getElementSymbol(matrix[r][c])}</div>
+                                    </div>
+                                    ${encodeHTML(matrix[r][c].name)}
+                                </td>`;} //Print out the header
+                    else {resText+=`<td class="round-cell">${matrix[r][c]}</td>`;}     //Print out the matrix value
+                };
+            resText+="</tr>";
+        }
+        resText+=`</table>
+</div>
+</div>
+</body>
+</html>`;
+
+
 
         try {
             $.fs.writeFile(filePath, resText);
@@ -294,12 +411,8 @@ th, td { border: 1px solid black; border-radius:3px;}
         }
     
         var browser = Browser.open("file:///" + filePath, "End To End Traceability Report");
-        console.log(resText);
+        //console.log(resText);
     }
-
-
-
-
 }
 
 
@@ -315,7 +428,16 @@ $(_sourceNode).each(function(element){
 });
 
 console.log("... done going through source elements!\r");
+console.log("Creating relationship matrix...\r");
+//Generate the relationship matrix
+_matrix=generateRelationshipMatrix(_matchingPaths);
 
-//Write to file
-write_matchingPathsToHTML(_matchingPaths);
+//Write paths to HTML file
+write_matchingPathsToHTML(_matchingPaths,_matrix);
+
+
+
+
+//Write matrix to HTML file
+//write_relationshipMatrixToHTML(_matrix);
 console.log("\r... done!");
