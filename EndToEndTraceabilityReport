@@ -29,9 +29,8 @@ RULES:
 var _sourceNode = "requirement";  //configurable parameter for starting element type.
 var _targetNode = "artifact";  //configurable parameter for target element type.
 var _propertyFilter="";  //optional configurable parameter for filtering _sourceNode's that match given value.  Property value in Archi element should be set to "yes" in order to get a match.
-var _matchingPaths = [];  //empty list to store the matching paths.
 var _deepLevelLimit = 15;  //number of levels to go deep in recursiveness, after which search will be truncated (to prevent unresponsiveness).
-var _verboseLogs=false;     //If you want to analyze the script's actions in more detail, set this to "true".
+var _verboseLogs=true;     //If you want to analyze the script's actions in more detail, set this to "true".
 var _showHTMLInLog=false;    //If you want a dump of the resulting HTML in the log, set this to "true".
 var _openInInternalBrowser=false;   //If you want the HTML to show in Archi's internal browser set this to "true".  NOTE: In Windows, the HTML doesn't seem to work.
 
@@ -44,8 +43,6 @@ var _applicationElements=["application-component","application-collaboration","a
 var _technologyElements=["node","device","system-software","technology-collaboration","technology-interface","path","communication-network","technology-function","technology-process","technology-interaction","technology-event","technology-service","artifact"];
 var _physicalElements=["equipment","facility","distribution-network","material"];
 var _impAndMigElements=["work-package","deliverable","implementation-event","plateau","gap"];
-
-var _matrix //The matrix to store the relationship matrix
 
 //variable to store the archimate figures
 var _archimateFigures=[
@@ -122,7 +119,8 @@ var _archimateFigures=[
     {elementType:"gap",elementFigure:"<svg width='35' height='22'><g transform='translate(-129,0)'><ellipse cx='137.5' cy='12.5' rx='5.25' ry='5.5' fill='#ffe0e0' stroke='rgb(0, 0, 0)' pointer-events='all'/><path d='M 130 10.85 L 145 10.85 M 130 14.15 L 145 14.15' fill='#e0ffe0' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all'/></g></svg>"},
 
     //Other
-    {elementType:"location",elementFigure:"<svg width='35' height='22'><g transform='translate(0,1)'><path d='M 7.5 15 C 7.51 12.72 6.91 10.79 6.1 10.5 C 4.03 9.55 2.8 7.13 3.13 4.63 C 3.47 2.13 5.27 0.22 7.5 0 C 9.73 0.22 11.53 2.13 11.87 4.63 C 12.2 7.13 10.97 9.55 8.9 10.5 C 8.09 10.79 7.49 12.72 7.5 15' fill='#ffb973' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all'/></g></svg>"}
+    {elementType:"location",elementFigure:"<svg width='35' height='22'><g transform='translate(0,1)'><path d='M 7.5 15 C 7.51 12.72 6.91 10.79 6.1 10.5 C 4.03 9.55 2.8 7.13 3.13 4.63 C 3.47 2.13 5.27 0.22 7.5 0 C 9.73 0.22 11.53 2.13 11.87 4.63 C 12.2 7.13 10.97 9.55 8.9 10.5 C 8.09 10.79 7.49 12.72 7.5 15' fill='#ffb973' stroke='rgb(0, 0, 0)' stroke-miterlimit='10' pointer-events='all'/></g></svg>"},
+    {elementType:"junction",elementFigure:""}
 ];
 
 
@@ -164,6 +162,7 @@ function getElementColor(element){
 
 //Function to get an element's Archimate symbol
 function getElementSymbol(element){
+    if(_verboseLogs) console.log(`... looking figure for ${element.type}...`);
      return _archimateFigures.find(e=>e.elementType==element.type).elementFigure;
 }
 
@@ -189,14 +188,14 @@ function passesPropertyValidation(element){
 
 
 //Recursive function to search for the Target Node starting from a given element
-function searchForTarget(element, path, _matchingPaths){
+function searchForTarget(element, path, matchingPaths){
     
     //Add current element to the path
     path.push({name:element.name,type:element.type,ID:element.id});
 
-    //If the element matches the Target node, add the current path to the _matchingPaths list
+    //If the element matches the Target node, add the current path to the matchingPaths list
     if(element.type==_targetNode){
-        _matchingPaths.push(path.slice());
+        matchingPaths.push(path.slice());
     }
 
     //If recursive iteration is too deep then truncate it
@@ -211,9 +210,10 @@ function searchForTarget(element, path, _matchingPaths){
             && (relationship.getTarget().type!=_sourceNode)                                                 //Prevent from going back in hierarchy by getting into the Source node.  TODO:See,s redundant
             && (relationship.type!="specialization-relationship")                                           //Prevent path deviation by going to a "parent", in this case outgoing inheritance
             && (relationship.type!="influence-relationship")                                                //Ignoring Influence relationships
+            && (relationship.type!="flow-relationship")                                                     //Ignoring Flow relationships
             && (!isTargetUpperLayer(element,relationship.getTarget()))){                                    //Prevent from going into an upper layer in Archimate's framwework
                 if(_verboseLogs) console.log("Looking from " + element.name + " into " + relationship.getTarget().name);
-                searchForTarget(relationship.getTarget(),path,_matchingPaths);
+                searchForTarget(relationship.getTarget(),path,matchingPaths);
         }
     });
 
@@ -225,9 +225,10 @@ function searchForTarget(element, path, _matchingPaths){
             && (relationship.type!="assignment-relationship")                                               //Prevent path deviation by going to a "parent", in this case incoming assignment
             && (relationship.type!="aggregation-relationship")                                              //Prevent path deviation by going to a "parent", in this case incoming aggregate
             && (relationship.type!="influence-relationship")                                                //Ignoring Influence relationships
+            && (relationship.type!="flow-relationship")                                                     //Ignoring Flow relationships
             && (!isTargetUpperLayer(element,relationship.getSource()))){                                    //Prevent from going into an upper layer in Archimate's framwework
                 if(_verboseLogs) console.log("Looking from " + element.name + " into " + relationship.getSource().name);
-                searchForTarget(relationship.getSource(),path,_matchingPaths);
+                searchForTarget(relationship.getSource(),path,matchingPaths);
         }
     });
 
@@ -277,7 +278,7 @@ function generateRelationshipMatrix(pathsData){
     //Fill the matrix
     for (r = 0; r < rowElements.length; r++){
         for (c = 0; c < colElements.length; c++){
-                _matchingPaths.forEach(function(path){
+            pathsData.forEach(function(path){
                     // console.log(`Comparing path...             ${Object.values(path)[0].name} & ${Object.values(path)[Object.values(path).length-1].name}`);
                     // console.log(`Vs matrix headers...       ${rowElements[r].name}            & ${colElements[c].name}`)
                     // console.log("==========================================================================");
@@ -296,12 +297,12 @@ function generateRelationshipMatrix(pathsData){
 
 
 //Function to write all the matching paths to a file
-function write_matchingPathsToFile(_matchingPaths){
+/*function write_matchingPathsToFile(matchingPaths){
     var filePath = window.promptSaveFile();
     var writer = new java.io.FileWriter(file);
     writer.write("Path\n");
     console.log("\nHere are the resulting paths ...\n");
-    _matchingPaths.forEach(function(path){
+    matchingPaths.forEach(function(path){
         var row="";
         path.forEach(function(elementName){
             row+=elementName + ",";
@@ -311,6 +312,7 @@ function write_matchingPathsToFile(_matchingPaths){
     });
     writer.close();
 }
+*/
 
 
 //Function to write all the matching paths and relationship matrix to a HTML file
@@ -454,31 +456,39 @@ function write_matchingPathsToHTML(matchingPaths,matrix){
 
 
 //==========================MAIN CODE=========================
+
+console.clear();
 console.log("Starting script...\n");
 console.log("Creating relationship paths...\n");
+
+
+_sourceNode=window.prompt("Source element",_sourceNode);
+_targetNode=window.prompt("Destination element",_targetNode);
+
+if(_verboseLogs) console.log(`Source: ${_sourceNode} - target:${_targetNode}`);
+
+var matchingPaths = [];  //empty list to store the matching paths.
 
 if(_verboseLogs) console.log("... getting initial batch of source elements of type:"+_sourceNode+" \n");
 $(_sourceNode).each(function(element){
     //Filter by element property if set
     if(passesPropertyValidation(element)){
-        searchForTarget(element,[],_matchingPaths);
+        searchForTarget(element,[],matchingPaths);
     }
 });
 
 if(_verboseLogs){
     console.log("... done going through source elements!\n");
     console.log("\nHere are the resulting paths ...\n");
-    console.log(JSON.stringify(_matchingPaths) + "\n");
+    console.log(JSON.stringify(matchingPaths) + "\n");
 }
 
 console.log("Creating relationship matrix...\n");
 //Generate the relationship matrix
-_matrix=generateRelationshipMatrix(_matchingPaths);
+var matrix=generateRelationshipMatrix(matchingPaths);
 
 console.log("Creating HTML...\n");
 //Write paths to HTML file
-write_matchingPathsToHTML(_matchingPaths,_matrix);
+write_matchingPathsToHTML(matchingPaths,matrix);
 
-//Write matrix to HTML file
-//write_relationshipMatrixToHTML(_matrix);
 console.log("\n... done!");
