@@ -226,6 +226,7 @@ function searchForTarget(element, path, matchingPaths){
             && (relationship.type!="aggregation-relationship")                                              //Prevent path deviation by going to a "parent", in this case incoming aggregate
             && (relationship.type!="influence-relationship")                                                //Ignoring Influence relationships
             && (relationship.type!="flow-relationship")                                                     //Ignoring Flow relationships
+            && (relationship.type!="triggering-relationship")                                               //Ignoring incoming Triggering relationships
             && (!isTargetUpperLayer(element,relationship.getSource()))){                                    //Prevent from going into an upper layer in Archimate's framwework
                 if(_verboseLogs) console.log("Looking from " + element.name + " into " + relationship.getSource().name);
                 searchForTarget(relationship.getSource(),path,matchingPaths);
@@ -457,6 +458,7 @@ function write_matchingPathsToHTML(matchingPaths,matrix){
 
 //==========================MAIN CODE=========================
 
+console.show();
 console.clear();
 console.log("Starting script...\n");
 console.log("Creating relationship paths...\n");
