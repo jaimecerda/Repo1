@@ -28,13 +28,15 @@ RULES:
 //==========================CONFIGURABLE PARAMETERS=========================
 var _sourceNode = "requirement";  //configurable parameter for starting element type.
 var _targetNode = "artifact";  //configurable parameter for target element type.
-var _propertyFilter="";  //optional configurable parameter for filtering _sourceNode's that match given value.  Property value in Archi element should be set to "yes" in order to get a match.
+var _propertyFilter="_Project";  //Parameter for filtering _sourceNode's that match a selected value.  Property value in Archi element or diagram will be selected by user on runtime.
 var _deepLevelLimit = 15;  //number of levels to go deep in recursiveness, after which search will be truncated (to prevent unresponsiveness).
-var _verboseLogs=true;     //If you want to analyze the script's actions in more detail, set this to "true".
-var _showHTMLInLog=false;    //If you want a dump of the resulting HTML in the log, set this to "true".
-var _openInInternalBrowser=false;   //If you want the HTML to show in Archi's internal browser set this to "true".  NOTE: In Windows, the HTML doesn't seem to work.
+var _verboseLogs=true;     //if you want to analyze the script's actions in more detail, set this to "true".
+var _showHTMLInLog=false;    //if you want a dump of the resulting HTML in the log, set this to "true".
+var _openInInternalBrowser=true;   //if you want the HTML to show in Archi's internal browser set this to "true".  NOTE: In Windows, the HTML doesn't seem to work.
 
 //==========================GLOBAL VARIABLES=========================
+var _selectedPropertyFilterValue="Tst200";    //variable to store the selection from the user in order to filter _sourceNode's.
+
 //variables to store standard archimate elements
 var _motivationElements=["stakeholder","driver","assessment","goal","outcome","principle","requirement","constraint","meaning","value"];
 var _strategyElements=["resource","capability","course-of-action","value-stream"];
@@ -128,6 +130,8 @@ var _archimateFigures=[
 
 
 //==========================FUNCTION LIBRARY=========================
+
+
 //Function to encond a raw string to a HTML compatible string 
 function encodeHTML(rawString){
     return rawString.replace(/[\u00A0-\u9999<>\&]/gim,function(i){
@@ -175,11 +179,49 @@ function isTargetUpperLayer(currentElement,targetElement){
     return targetElementLayer<currentElementLayer;  //TODO: Change the order so operator does what function name indicates
 }
 
+//Function to show all available proeprty values corresponding to the _propertyFilter set in the global parameters
+function getAllPropertyFilterValues(){
+    var allElements=$("*");
+
+    var allPropVals=[];
+    allElements.each(function(e){
+        if($(e).prop(_propertyFilter)!=null){
+            if(_verboseLogs) console.log(`Found property value:${$(e).prop(_propertyFilter)} in element:${e.tyope} - ${e.name}`);
+            if(allPropVals.indexOf($(e).prop(_propertyFilter))==-1) {allPropVals.push($(e).prop(_propertyFilter));}
+        }
+    });
+
+    return allPropVals;
+}
+
+//Function to get all the available elements of the Archimate specification into an array
+function prepareAllArchimateElements(defaultValue){
+    var allElements= _archimateFigures.map(a=>a.elementType);
+
+    return allElements;
+
+}
 
 //Function to know if there's an element propertyto filter by
 function passesPropertyValidation(element){
-    if(_propertyFilter!=""){
-        return $(element).prop(_propertyFilter)==null ? false : $(element).prop(_propertyFilter).toLowerCase()=="yes";
+    var passedElement=false;
+    var passedView=false;
+
+    if(_selectedPropertyFilterValue!="" && _selectedPropertyFilterValue!=null && _selectedPropertyFilterValue!="---NONE---"){
+        
+        //See if any of the diagrams where the element appears on has a selected property filter value
+        var elementViews=$(element).viewRefs();
+        elementViews.each(function(v){
+            if( $(v).prop(_propertyFilter)== null ? false : $(v).prop(_propertyFilter).toLowerCase()==_selectedPropertyFilterValue.toLowerCase() ){
+                passedView=true;
+                return false; //to break the .each loop
+            }
+        });
+        
+        //See if the element itself has a selected property filter value
+        passedElement=$(element).prop(_propertyFilter)==null ? false : $(element).prop(_propertyFilter).toLowerCase()==_selectedPropertyFilterValue.toLowerCase();
+
+        return passedView || passedElement;
     }
     else{
         return true;
@@ -456,18 +498,48 @@ function write_matchingPathsToHTML(matchingPaths,matrix){
 }
 
 
+//==========================ECLIPSE CODE=========================
+window.defaultedPromptSelection = function (title,message,choices,defaultSelection) {
+    var ElementListSelectionDialog = Java.type('org.eclipse.ui.dialogs.ElementListSelectionDialog');
+    var LabelProvider = Java.type('org.eclipse.jface.viewers.LabelProvider');
+    var dialog = new ElementListSelectionDialog(shell, new LabelProvider());
+    var arrDefaultSelection=[];
+    var res="";
+    arrDefaultSelection.push(defaultSelection);
+
+    dialog.setElements(choices);
+    dialog.setInitialSelections(arrDefaultSelection);
+    dialog.setTitle(title);
+    dialog.setMessage(message);
+    dialog.setMultipleSelection(false);
+    dialog.open();
+    dialog.setMultipleSelection(false);
+    res= String(dialog.getResult());
+
+    return res==null ? defaultSelection :res;
+}
+
+
 //==========================MAIN CODE=========================
 
 console.show();
 console.clear();
+
+console.log("Letting user select primary values...");
+
+var availablePropVals=["---NONE---"].concat(getAllPropertyFilterValues());
+_selectedPropertyFilterValue=window.defaultedPromptSelection("Choose a property value","Select a property value to filter source nodes.  \nSelect NONE for no filtering...",availablePropVals,"---NONE---");
+_sourceNode=window.defaultedPromptSelection("Choose source element",`Select a source element.  Pressing CANCEL will \nauto-select the default value (${_sourceNode})...`,prepareAllArchimateElements(_sourceNode),_sourceNode);
+_targetNode=window.defaultedPromptSelection("Choose destination element",`Select a target element.  Pressing CANCEL \nwill auto-select the default value (${_targetNode})...`,prepareAllArchimateElements(_targetNode),_targetNode);
+
+// _selectedPropertyFilterValue=window.promptSelection("Choose a property value",availablePropVals);
+// _sourceNode=window.prompt("Source element",_sourceNode);
+// _targetNode=window.prompt("Destination element",_targetNode);
+
 console.log("Starting script...\n");
 console.log("Creating relationship paths...\n");
 
-
-_sourceNode=window.prompt("Source element",_sourceNode);
-_targetNode=window.prompt("Destination element",_targetNode);
-
-if(_verboseLogs) console.log(`Source: ${_sourceNode} - target:${_targetNode}`);
+if(_verboseLogs) console.log(`Primary values: source: ${_sourceNode} - target:${_targetNode}, Filter property value:${_selectedPropertyFilterValue}`);
 
 var matchingPaths = [];  //empty list to store the matching paths.
 
