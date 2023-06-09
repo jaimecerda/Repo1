@@ -37,7 +37,7 @@ var _showHTMLInLog=false;    //if you want a dump of the resulting HTML in the l
 var _openInInternalBrowser=true;   //if you want the HTML to show in Archi's internal browser set this to "true".  NOTE: In Windows, the HTML doesn't seem to work.
 
 //==========================GLOBAL VARIABLES=========================
-var _selectedPropertyFilterValue="Tst200";    //variable to store the selection from the user in order to filter _sourceNode's.
+var _selectedPropertyFilterValue="";    //variable to store the selection from the user in order to filter _sourceNode's.
 
 //variables to store standard archimate elements
 var _motivationElements=["stakeholder","driver","assessment","goal","outcome","principle","requirement","constraint","meaning","value"];
