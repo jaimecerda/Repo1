@@ -1,5 +1,5 @@
 /*
-Ento-to-End Traceability Report
+Ento-to-End Traceability Report v1.0
 2023-05-01
 Author: Jaime Cerda
 
@@ -10,18 +10,20 @@ Have a way of observing the paths that implement such indirect relationships.
 See the indirect relationships in form of matrix.
 
 RULES:
--Need to delcare the origin and destination in the CONFIGURABLE PARAMETERS section.
+-Need to delcare the source and target element types in the  "Parameters" section.  User can select others on runtime, if no selection is done, the ones in the "Paramters" section will always be the default.  They will also be preselected at runtime.
 -In order to prevent circular references the script has these rules:
-    -The script treats the Archimate framework layers as a hierarchy, so the recursive loop will prevent a lower layer element to go search into an upper layer element.  Motivation layer is treated same as the Strategy layer (top-most layers).  Grouping and Location are ignored and will be recursively searched.
-    -The script prevents searching into "parent" elements.  Example: Once it goes into a Process, then into a Function, it will prevent going back to another Process.  Relationships that are considered to define "parent-child" relationships are:
+    -It treats the Archimate framework layers as a hierarchy, so the recursive loop will prevent a lower layer element to go search into an upper layer element.  Motivation layer is treated same as the Strategy layer (top-most layers).  Grouping and Location are ignored and will be recursively searched.
+    -It prevents searching into "parent" elements.  Example: Once it goes into a Process, then into a Function, it will prevent going back to another Process.  Relationships considered as "parent-child" are:
         --specialization-relationship
         --composition-relationship
         --assignment-relationship
         --aggregation-relationship
         --influence-relationship
--The recursive loop that generates the paths from origin to destination searches for the existence of relationships, it DOESN'T follow archimate rules as to what constitutes a valid relationship, the modelling tool should take care of this.
--On the same note, the indirect relationship, is just declared as a plain relationship, it DOESN'T infer a derived relationship as established in Archimate specification.
--In the relationship matrix the origin element will be treated as rows and the destination element will be treated as columns.
+-The recursive loop that generates the paths from source to target searches for the existence of relationships, it DOESN'T follow archimate rules as to what constitutes a valid relationship, the modelling tool should take care of this.
+-On the same note, the indirect relationship found between source & destination is just declared as a plain relationship, it DOESN'T infer a derived relationship as established in Archimate specification.
+-In the relationship matrix the source element will be treated as rows and the target element will be treated as columns.
+-There's a way to filter elements, but only the source elements are filtered.  It's done via a property.  The default is set to "_Project" but can be changed in the "Parameters" section.  You can set any property value you wish, once you run the script you can select the value and all elements that have that value will be considered.  Once a source element is found and passed the filter, it will search for the target regardless if any element in the path has the property value.
+-You can set a property value at diagram level.  If any source elements exist within the diagram, the script will consider them as if they've inherited the property value.
 */
 
 
@@ -130,8 +132,6 @@ var _archimateFigures=[
 
 
 //==========================FUNCTION LIBRARY=========================
-
-
 //Function to encond a raw string to a HTML compatible string 
 function encodeHTML(rawString){
     return rawString.replace(/[\u00A0-\u9999<>\&]/gim,function(i){
@@ -164,6 +164,7 @@ function getElementColor(element){
     if(_impAndMigElements.find(e=>e==element.type)){return "#ffe0e0";}
 }
 
+
 //Function to get an element's Archimate symbol
 function getElementSymbol(element){
     if(_verboseLogs) console.log(`... looking figure for ${element.type}...`);
@@ -178,6 +179,7 @@ function isTargetUpperLayer(currentElement,targetElement){
 
     return targetElementLayer<currentElementLayer;  //TODO: Change the order so operator does what function name indicates
 }
+
 
 //Function to show all available proeprty values corresponding to the _propertyFilter set in the global parameters
 function getAllPropertyFilterValues(){
@@ -194,6 +196,7 @@ function getAllPropertyFilterValues(){
     return allPropVals;
 }
 
+
 //Function to get all the available elements of the Archimate specification into an array
 function prepareAllArchimateElements(defaultValue){
     var allElements= _archimateFigures.map(a=>a.elementType);
@@ -201,6 +204,7 @@ function prepareAllArchimateElements(defaultValue){
     return allElements;
 
 }
+
 
 //Function to know if there's an element propertyto filter by
 function passesPropertyValidation(element){
@@ -278,6 +282,7 @@ function searchForTarget(element, path, matchingPaths){
     //Remove the current element from the path before returning
     path.pop();
 }
+
 
 //Function to construct a relationship matrix of indirect relationships between origin and destination elements based on the relationship paths found in previous steps
 function generateRelationshipMatrix(pathsData){
@@ -521,7 +526,6 @@ window.defaultedPromptSelection = function (title,message,choices,defaultSelecti
 
 
 //==========================MAIN CODE=========================
-
 console.show();
 console.clear();
 
@@ -532,18 +536,16 @@ _selectedPropertyFilterValue=window.defaultedPromptSelection("Choose a property 
 _sourceNode=window.defaultedPromptSelection("Choose source element",`Select a source element.  Pressing CANCEL will \nauto-select the default value (${_sourceNode})...`,prepareAllArchimateElements(_sourceNode),_sourceNode);
 _targetNode=window.defaultedPromptSelection("Choose destination element",`Select a target element.  Pressing CANCEL \nwill auto-select the default value (${_targetNode})...`,prepareAllArchimateElements(_targetNode),_targetNode);
 
-// _selectedPropertyFilterValue=window.promptSelection("Choose a property value",availablePropVals);
-// _sourceNode=window.prompt("Source element",_sourceNode);
-// _targetNode=window.prompt("Destination element",_targetNode);
 
 console.log("Starting script...\n");
 console.log("Creating relationship paths...\n");
-
 if(_verboseLogs) console.log(`Primary values: source: ${_sourceNode} - target:${_targetNode}, Filter property value:${_selectedPropertyFilterValue}`);
 
 var matchingPaths = [];  //empty list to store the matching paths.
 
 if(_verboseLogs) console.log("... getting initial batch of source elements of type:"+_sourceNode+" \n");
+
+//Starting the search
 $(_sourceNode).each(function(element){
     //Filter by element property if set
     if(passesPropertyValidation(element)){
